@@ -1,0 +1,1 @@
+vcard-0.2dev.min.js

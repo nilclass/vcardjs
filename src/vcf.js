@@ -43,7 +43,7 @@ var VCF;
             this.lex(input, function(key, value, attrs) {
                 function setAttr(val) {
                     if(vcard) {
-                        vcard.setAttribute(key.toLowerCase(), val);
+                        vcard.addAttribute(key.toLowerCase(), val);
                     }
                 }
                 if(key == 'BEGIN') {
@@ -74,12 +74,29 @@ var VCF;
                         setAttr(this.parseDateAndOrTime(value));
                     }
 
-                } else if(key == 'N') {
+                } else if(key == 'N') { // 6.2.2
                     setAttr(this.parseName(value));
 
-                } else if(key == 'GENDER') {
+                } else if(key == 'GENDER') { // 6.2.7
                     setAttr(this.parseGender(value));
 
+                } else if(key == 'TEL') { // 6.4.1
+                    setAttr({
+                        type: (attrs.TYPE || 'voice'),
+                        value: value
+                    });
+
+                } else if(key == 'EMAIL') { // 6.4.2
+                    setAttr({
+                        type: attrs.TYPE,
+                        value: value
+                    });
+
+                } else if(key == 'IMPP') { // 6.4.3
+                    // RFC 6350 doesn't define TYPEs for IMPP addresses.
+                    // It just seems odd to me to have multiple email addresses and phone numbers,
+                    // but not multiple IMPP addresses.
+                    setAttr({ value: value });
                 } else {
                     console.log('WARNING: unhandled key: ', key);
                 }
