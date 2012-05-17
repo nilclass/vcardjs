@@ -2,10 +2,9 @@
  ** VCF - Parser for the vcard format.
  **
  ** This is purely a vCard 4.0 implementation, as described in RFC 6350.
- ** For compatibility with your ancient (web)mail client's format ask your mom.
  **
  ** The generated VCard object roughly corresponds to the JSON representation
- ** of a hCard, as described here: http://microformats.org/wiki/json
+ ** of a hCard, as described here: http://microformats.org/wiki/jcard
  ** (Retrieved May 17, 2012)
  **
  **/

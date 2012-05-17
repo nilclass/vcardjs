@@ -1,0 +1,62 @@
+#+TITLE: vCardJS - a vCard 4.0 implementation in JavaScript.
+
+* Goals
+  - complete vCard 4.0 (RFC 6350) support
+  - jCard compatibility
+  - hCard compatibility
+
+* Examples
+** parse a vcard from a string:
+
+#+BEGIN_SRC javascript
+
+VCF.parse(input, function(vcard) {
+  // this function is called with a VCard instance.
+  // If the input contains more than one vCard, it is called multiple times.
+  console.log("Formatted name", vcard.fn);
+  console.log("Names", JSON.stringify(vcard.n));
+});
+
+#+END_SRC
+
+** load vcard from a file:
+
+#+BEGIN_SRC html
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="../src/vcard.js"></script>
+    <script src="../src/vcf.js"></script>
+  </head>
+
+  <body>
+
+    <script>
+      function loadVCard() {
+        var fileReader = new FileReader();
+   
+        fileReader.onloadend = function() {
+          document.getElementById('input').innerText = fileReader.result;
+          VCF.parse(fileReader.result, function(vc) {
+            document.getElementById('output').innerText = JSON.stringify(vc);
+          });
+        };
+   
+        fileReader.readAsText(document.getElementById('upload').files[0]);
+      }
+    </script>
+
+    <input type="file" id="upload">
+    <button onclick="loadVCard()">Load vCard</button>
+    <h1>IN:</h1>
+    <pre id="input"></pre>
+    <h1>OUT:</h1>
+    <pre id="output"></pre>
+
+</body>
+#+END_SRC
+
+* References
+** [[http://datatracker.ietf.org/doc/rfc6350/?include_text%3D1][RFC 6350 - vCard Format Specification (Proposed Standard)]]
+** [[http://microformats.org/wiki/jCard][jCard]]
+** [[http://microformats.org/wiki/json][ufJSON]]

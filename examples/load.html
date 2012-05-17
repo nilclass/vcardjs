@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="../src/vcard.js"></script>
+    <script src="../src/vcf.js"></script>
+  </head>
+
+  <body>
+
+    <script>
+      function loadVCard() {
+        var fileReader = new FileReader();
+   
+        fileReader.onloadend = function() {
+          document.getElementById('input').innerText = fileReader.result;
+          VCF.parse(fileReader.result, function(vc) {
+            document.getElementById('output').innerText = JSON.stringify(vc);
+          });
+        };
+   
+        fileReader.readAsText(document.getElementById('upload').files[0]);
+      }
+    </script>
+
+    <input type="file" id="upload">
+    <button onclick="loadVCard()">Load vCard</button>
+    <h1>IN:</h1>
+    <pre id="input"></pre>
+    <h1>OUT:</h1>
+    <pre id="output"></pre>
+
+</body>
