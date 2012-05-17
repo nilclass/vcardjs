@@ -5,6 +5,18 @@
   - jCard compatibility
   - hCard compatibility
 
+* Features
+  - can parse vCards.
+  - generates (roughly) jCards.
+
+* TODOs
+  - implement more attributes.
+  - test with output from various software.
+  - implement: generate vcards from jcards
+  - implement: generate hcards (there's a start in [[vcard.js][https://github.com/mattt/vcard.js]]'s toHtml() method)
+
+** Extend
+
 * Examples
 ** parse a vcard from a string:
 
@@ -59,4 +71,5 @@ VCF.parse(input, function(vcard) {
 * References
 ** [[http://datatracker.ietf.org/doc/rfc6350/?include_text%3D1][RFC 6350 - vCard Format Specification (Proposed Standard)]]
 ** [[http://microformats.org/wiki/jCard][jCard]]
-** [[http://microformats.org/wiki/json][ufJSON]]
+** [[http://microformats.org/wiki/json][ufJSON - JSON representation of microformats]]
+** [[http://docs.jquery.com/QUnit][QUnit]]
