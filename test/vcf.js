@@ -286,28 +286,22 @@ asyncTest("The fn attribute is set correctly", function() {
 var sample8 =
     "BEGIN:VCARD\r\n" +
     "VERSION:4.0\r\n" +
-    "N:Lessing;Gotthold;Ephraim\r\n" +
+    "N:Lessing;Gotthold;Ephraim;;\r\n" +
     "END:VCARD\r\n";
 
 asyncTest("A three-part name is set correctly", function() {
     VCF.parse(sample8, function(vc) {
         ok(vc.n, "Name is set");
-        deepEqual(
-            vc.n['given-name'], ['Gotthold'],
-            "given names are correct"
-        );
-        deepEqual(
-            vc.n['family-name'], ['Lessing'],
-            "family names are correct"
-        );
-        deepEqual(
-            vc.n['additional-name'], ['Ephraim'],
-            "additional names are correct"
-        );
+        deepEqual(vc.n, {
+            'given-name': ['Gotthold'],
+            'family-name': ['Lessing'],
+            'additional-name': ['Ephraim']
+        });
 
         start();
     });
 });
+
 
 var sample9 =
     "BEGIN:VCARD\r\n" +

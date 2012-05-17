@@ -95,7 +95,9 @@ var VCF;
             var parts = name.split(';');
             var n = {};
             for(var i in parts) {
-                n[this.nameParts[i]] = parts[i].split(',');
+                if(parts[i]) {
+                    n[this.nameParts[i]] = parts[i].split(',');
+                }
             }
             return n;
         },
