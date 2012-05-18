@@ -1,0 +1,9 @@
+/**
+ * vCardJS - a vCard 4.0 implementation in JavaScript
+ *
+ * (c) 2012 - Niklas Cathor
+ *
+ * Latest source: https://github.com/nilclass/vcardjs
+ **/
+
+define('vcardjs', function() {

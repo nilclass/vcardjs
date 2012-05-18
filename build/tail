@@ -1,0 +1,5 @@
+  return {
+      VCF: VCF,
+      VCard: VCard
+  };
+});
