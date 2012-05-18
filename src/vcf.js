@@ -83,12 +83,14 @@ var VCF;
                 } else if(key == 'TEL') { // 6.4.1
                     setAttr({
                         type: (attrs.TYPE || 'voice'),
+                        pref: attrs.PREF,
                         value: value
                     });
 
                 } else if(key == 'EMAIL') { // 6.4.2
                     setAttr({
                         type: attrs.TYPE,
+                        pref: attrs.PREF,
                         value: value
                     });
 
@@ -97,6 +99,23 @@ var VCF;
                     // It just seems odd to me to have multiple email addresses and phone numbers,
                     // but not multiple IMPP addresses.
                     setAttr({ value: value });
+
+                } else if(key == 'LANG') { // 6.4.4
+                    setAttr({
+                        type: attrs.TYPE,
+                        pref: attrs.PREF,
+                        value: value
+                    });
+
+                } else if(key == 'TZ') { // 6.5.1
+                    // neither hCard nor jCard mention anything about the TZ property, except that it's singular.
+                    // using compound representation.
+                    if(attrs.VALUE == 'utc-offset') {
+                        setAttr({ 'utc-offset': this.parseTimezone(value) });
+                    } else {
+                        setAttr({ name: value });
+                    }
+
                 } else {
                     console.log('WARNING: unhandled key: ', key);
                 }
@@ -264,13 +283,22 @@ var VCF;
             return new Date(c);
         },
 
-        applyTimezone: function(date, tz) {
+        parseTimezone: function(tz) {
             var md;
             if((md = tz.match(/^([+\-])(\d{2})(\d{2})?/))) {
                 var offset = new Date(0);
                 offset.setUTCHours(md[2]);
                 offset.setUTCMinutes(md[3] || 0);
-                return this.addDates(date, offset, md[1] == '+');
+                return Number(offset) * (md[1] == '+' ? +1 : -1);
+            } else {
+                return null;
+            }
+        },
+
+        applyTimezone: function(date, tz) {
+            var offset = this.parseTimezone(tz);
+            if(offset) {
+                return new Date(Number(date) + offset);
             } else {
                 return date;
             }
