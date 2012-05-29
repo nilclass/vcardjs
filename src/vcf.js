@@ -17,14 +17,25 @@ var VCF;
         simpleKeys: [
             'VERSION',
             'FN', // 6.2.1
-            'PHOTO' // 6.2.4 (we don't care about URIs [yet])
+            'PHOTO', // 6.2.4 (we don't care about URIs [yet])
+            'GEO', // 6.5.2 (SHOULD also b a URI)
+            'TITLE', // 6.6.1
+            'ROLE', // 6.6.2
+            'LOGO', // 6.6.3 (also [possibly data:] URI)
+            'MEMBER', // 6.6.5
+            'NOTE', // 6.7.2
+            'PRODID', // 6.7.3
+            'SOUND', // 6.7.5
+            'UID', // 6.7.6
         ],
         csvKeys: [
-            'NICKNAME' // 6.2.3
+            'NICKNAME', // 6.2.3
+            'CATEGORIES', // 6.7.1
         ],
         dateAndOrTimeKeys: [
             'BDAY',        // 6.2.5
             'ANNIVERSARY', // 6.2.6
+            'REV', // 6.7.4
         ],
 
         // parses the given input, constructing VCard objects.
@@ -108,13 +119,29 @@ var VCF;
                     });
 
                 } else if(key == 'TZ') { // 6.5.1
-                    // neither hCard nor jCard mention anything about the TZ property, except that it's singular.
+                    // neither hCard nor jCard mention anything about the TZ
+                    // property, except that it's singular (which it is *not* in
+                    // RFC 6350).
                     // using compound representation.
                     if(attrs.VALUE == 'utc-offset') {
                         setAttr({ 'utc-offset': this.parseTimezone(value) });
                     } else {
                         setAttr({ name: value });
                     }
+
+                } else if(key == 'ORG') { // 6.6.4
+                    var parts = value.split(';');
+                    setAttr({
+                        'organization-name': parts[0],
+                        'organization-unit': parts[1]
+                    });
+
+                } else if(key == 'RELATED') { // 6.6.6
+                    setAttr({
+                        type: attrs.TYPE,
+                        pref: attrs.PREF,
+                        value: attrs.VALUE
+                    });
 
                 } else {
                     console.log('WARNING: unhandled key: ', key);
