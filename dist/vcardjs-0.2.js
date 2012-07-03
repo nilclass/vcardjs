@@ -7,29 +7,213 @@
  **/
 
 define('vcardjs', function() {
+/*!
+Math.uuid.js (v1.4)
+http://www.broofa.com
+mailto:robert@broofa.com
+
+Copyright (c) 2010 Robert Kieffer
+Dual licensed under the MIT and GPL licenses.
+*/
+
+/*
+ * Generate a random uuid.
+ *
+ * USAGE: Math.uuid(length, radix)
+ *   length - the desired number of characters
+ *   radix  - the number of allowable values for each character.
+ *
+ * EXAMPLES:
+ *   // No arguments  - returns RFC4122, version 4 ID
+ *   >>> Math.uuid()
+ *   "92329D39-6F5C-4520-ABFC-AAB64544E172"
+ *
+ *   // One argument - returns ID of the specified length
+ *   >>> Math.uuid(15)     // 15 character ID (default base=62)
+ *   "VcydxgltxrVZSTV"
+ *
+ *   // Two arguments - returns ID of the specified length, and radix. (Radix must be <= 62)
+ *   >>> Math.uuid(8, 2)  // 8 character ID (base=2)
+ *   "01001010"
+ *   >>> Math.uuid(8, 10) // 8 character ID (base=10)
+ *   "47473046"
+ *   >>> Math.uuid(8, 16) // 8 character ID (base=16)
+ *   "098F4D35"
+ */
+(function() {
+  // Private array of chars to use
+  var CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.split('');
+
+  Math.uuid = function (len, radix) {
+    var chars = CHARS, uuid = [], i;
+    radix = radix || chars.length;
+
+    if (len) {
+      // Compact form
+      for (i = 0; i < len; i++) uuid[i] = chars[0 | Math.random()*radix];
+    } else {
+      // rfc4122, version 4 form
+      var r;
+
+      // rfc4122 requires these characters
+      uuid[8] = uuid[13] = uuid[18] = uuid[23] = '-';
+      uuid[14] = '4';
+
+      // Fill in random data.  At i==19 set the high bits of clock sequence as
+      // per rfc4122, sec. 4.1.5
+      for (i = 0; i < 36; i++) {
+        if (!uuid[i]) {
+          r = 0 | Math.random()*16;
+          uuid[i] = chars[(i == 19) ? (r & 0x3) | 0x8 : r];
+        }
+      }
+    }
+
+    return uuid.join('');
+  };
+
+  // A more performant, but slightly bulkier, RFC4122v4 solution.  We boost performance
+  // by minimizing calls to random()
+  Math.uuidFast = function() {
+    var chars = CHARS, uuid = new Array(36), rnd=0, r;
+    for (var i = 0; i < 36; i++) {
+      if (i==8 || i==13 ||  i==18 || i==23) {
+        uuid[i] = '-';
+      } else if (i==14) {
+        uuid[i] = '4';
+      } else {
+        if (rnd <= 0x02) rnd = 0x2000000 + (Math.random()*0x1000000)|0;
+        r = rnd & 0xf;
+        rnd = rnd >> 4;
+        uuid[i] = chars[(i == 19) ? (r & 0x3) | 0x8 : r];
+      }
+    }
+    return uuid.join('');
+  };
+
+  // A more compact, but less performant, RFC4122v4 solution:
+  Math.uuidCompact = function() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+      return v.toString(16);
+    });
+  };
+})();
 
 // exported globals
 var VCard;
 
 (function() {
 
-    VCard = function() {
+    VCard = function(attributes) {
+	      this.changed = false;
+        if(typeof(attributes) === 'object') {
+            for(var key in attributes) {
+                this[key] = attributes[key];
+	              this.changed = true;
+            }
+        }
     };
 
     VCard.prototype = {
 
-        // don't set attributes directly. always use this method.
-        // it may call callbacks in the future.
+	      // Check validity of this VCard instance. Properties that can be generated,
+	      // will be generated. If any error is found, false is returned and vcard.errors
+	      // set to an Array of [attribute, errorType] arrays.
+	      // Otherwise true is returned.
+	      //
+	      // In case of multivalued properties, the "attribute" part of the error is
+	      // the attribute name, plus it's index (starting at 0). Example: email0, tel7, ...
+	      //
+	      // It is recommended to call this method even if this VCard object was imported,
+	      // as some software (e.g. Gmail) doesn't generate UIDs.
+	      validate: function() {
+	          var errors = [];
+
+	          function addError(attribute, type) {
+		            errors.push([attribute, type]);
+	          }
+
+	          if(! this.fn) { // FN is a required attribute
+		            addError("fn", "required");
+	          }
+
+	          // make sure multivalued properties are *always* in array form
+	          for(var key in VCard.multivaluedKeys) {
+		            if(this[key] && ! (this[key] instanceof Array)) {
+                    this[key] = [this[key]];
+		            }
+	          }
+
+	          // make sure compound fields have their type & value set
+	          // (to prevent mistakes such as vcard.addAttribute('email', 'foo@bar.baz')
+	          function validateCompoundWithType(attribute, values) {
+		            for(var i in values) {
+		                var value = values[i];
+		                if(typeof(value) !== 'object') {
+			                  errors.push([attribute + '-' + i, "not-an-object"]);
+		                } else if(! value.type) {
+			                  errors.push([attribute + '-' + i, "missing-type"]);
+		                } else if(! value.value) { // empty values are not allowed.
+			                  errors.push([attribute + '-' + i, "missing-value"]);
+		                }
+		            }
+	          }
+
+	          if(this.email) {
+		            validateCompoundWithType('email', this.email);
+	          }
+
+	          if(this.tel) {
+		            validateCompoundWithType('email', this.tel);
+	          }
+
+	          if(! this.uid) {
+		            this.addAttribute('uid', this.generateUID());
+	          }
+
+	          if(! this.rev) {
+		            this.addAttribute('rev', this.generateRev());
+	          }
+
+	          this.errors = errors;
+
+	          return ! (errors.length > 0);
+	      },
+
+	      // generate a UID. This generates a UUID with uuid: URN namespace, as suggested
+	      // by RFC 6350, 6.7.6
+	      generateUID: function() {
+	          return 'uuid:' + Math.uuid();
+	      },
+
+	      // generate revision timestamp (a full ISO 8601 date/time string in basic format)
+	      generateRev: function() {
+	          return (new Date()).toISOString().replace(/[\.\:\-]/g, '');
+	      },
+
+	      // Set the given attribute to the given value.
+	      // This sets vcard.changed to true, so you can check later whether anything
+	      // was updated by your code.
         setAttribute: function(key, value) {
             this[key] = value;
+	          this.changed = true;
         },
 
+	      // Set the given attribute to the given value.
+	      // If the given attribute's key has cardinality > 1, instead of overwriting
+	      // the current value, an additional value is appended.
         addAttribute: function(key, value) {
             console.log('add attribute', key, value);
+            if(! value) {
+                return;
+            }
             if(VCard.multivaluedKeys[key]) {
                 if(this[key]) {
-                    this[key].push(value);
+                    console.log('multivalued push');
+                    this[key].push(value)
                 } else {
+                    console.log('multivalued set');
                     this.setAttribute(key, [value]);
                 }
             } else {
@@ -37,6 +221,14 @@ var VCard;
             }
         },
 
+	      // convenience method to get a JSON serialized jCard.
+	      toJSON: function() {
+	          return JSON.stringify(this.toJCard());
+	      },
+
+	      // Copies all properties (i.e. all specified in VCard.allKeys) to a new object
+	      // and returns it.
+	      // Useful to serialize to JSON afterwards.
         toJCard: function() {
             var jcard = {};
             for(var k in VCard.allKeys) {
@@ -46,18 +238,82 @@ var VCard;
                 }
             }
             return jcard;
-        }
+        },
 
+        // synchronizes two vcards, using the mechanisms described in
+        // RFC 6350, Section 7.
+        // Returns a new VCard object.
+        // If a property is present in both source vcards, and that property's
+        // maximum cardinality is 1, then the value from the second (given) vcard
+        // precedes.
+        //
+        // TODO: implement PID matching as described in 7.3.1
+        merge: function(other) {
+            if(typeof(other.uid) !== 'undefined' &&
+               typeof(this.uid) !== 'undefined' &&
+               other.uid !== this.uid) {
+                // 7.1.1
+                throw "Won't merge vcards without matching UIDs.";
+            }
+
+            var result = new VCard();
+
+            function mergeProperty(key) {
+                if(other[key]) {
+                    if(other[key] == this[key]) {
+                        result.setAttribute(this[key]);
+                    } else {
+                        result.addAttribute(this[key]);
+                        result.addAttribute(other[key]);
+                    }
+                } else {
+                    result[key] = this[key];
+                }
+            }
+
+            for(key in this) { // all properties of this
+                mergeProperty(key);
+            }
+            for(key in other) { // all properties of other *not* in this
+                if(! result[key]) {
+                    mergeProperty(key);
+                }
+            }
+        }
+    };
+
+    VCard.enums = {
+        telType: ["text", "voice", "fax", "cell", "video", "pager", "textphone"],
+        relatedType: ["contact", "acquaintance", "friend", "met", "co-worker",
+                      "colleague", "co-resident", "neighbor", "child", "parent",
+                      "sibling", "spouse", "kin", "muse", "crush", "date",
+                      "sweetheart", "me", "agent", "emergency"],
+        // FIXME: these aren't actually defined anywhere. just very commmon.
+        //        maybe there should be more?
+        emailType: ["work", "home", "internet"],
+        langType: ["work", "home"],
+        
     };
 
     VCard.allKeys = [
         'fn', 'n', 'nickname', 'photo', 'bday', 'anniversary', 'gender',
-        'tel', 'email'
+        'tel', 'email', 'impp', 'lang', 'tz', 'geo', 'title', 'role', 'logo',
+        'org', 'member', 'related', 'categories', 'note', 'prodid', 'rev',
+        'sound', 'uid'
     ];
 
     VCard.multivaluedKeys = {
         email: true,
-        tel: true
+        tel: true,
+        geo: true,
+        title: true,
+        role: true,
+        logo: true,
+        org: true,
+        member: true,
+        related: true,
+        categories: true,
+        note: true
     };
 
 })();
@@ -76,17 +332,29 @@ var VCF;
 
 (function() {
     VCF = {
+
         simpleKeys: [
             'VERSION',
             'FN', // 6.2.1
-            'PHOTO' // 6.2.4 (we don't care about URIs [yet])
+            'PHOTO', // 6.2.4 (we don't care about URIs [yet])
+            'GEO', // 6.5.2 (SHOULD also b a URI)
+            'TITLE', // 6.6.1
+            'ROLE', // 6.6.2
+            'LOGO', // 6.6.3 (also [possibly data:] URI)
+            'MEMBER', // 6.6.5
+            'NOTE', // 6.7.2
+            'PRODID', // 6.7.3
+            'SOUND', // 6.7.5
+            'UID', // 6.7.6
         ],
         csvKeys: [
-            'NICKNAME' // 6.2.3
+            'NICKNAME', // 6.2.3
+            'CATEGORIES', // 6.7.1
         ],
         dateAndOrTimeKeys: [
             'BDAY',        // 6.2.5
             'ANNIVERSARY', // 6.2.6
+            'REV', // 6.7.4
         ],
 
         // parses the given input, constructing VCard objects.
@@ -145,12 +413,14 @@ var VCF;
                 } else if(key == 'TEL') { // 6.4.1
                     setAttr({
                         type: (attrs.TYPE || 'voice'),
+                        pref: attrs.PREF,
                         value: value
                     });
 
                 } else if(key == 'EMAIL') { // 6.4.2
                     setAttr({
                         type: attrs.TYPE,
+                        pref: attrs.PREF,
                         value: value
                     });
 
@@ -159,6 +429,39 @@ var VCF;
                     // It just seems odd to me to have multiple email addresses and phone numbers,
                     // but not multiple IMPP addresses.
                     setAttr({ value: value });
+
+                } else if(key == 'LANG') { // 6.4.4
+                    setAttr({
+                        type: attrs.TYPE,
+                        pref: attrs.PREF,
+                        value: value
+                    });
+
+                } else if(key == 'TZ') { // 6.5.1
+                    // neither hCard nor jCard mention anything about the TZ
+                    // property, except that it's singular (which it is *not* in
+                    // RFC 6350).
+                    // using compound representation.
+                    if(attrs.VALUE == 'utc-offset') {
+                        setAttr({ 'utc-offset': this.parseTimezone(value) });
+                    } else {
+                        setAttr({ name: value });
+                    }
+
+                } else if(key == 'ORG') { // 6.6.4
+                    var parts = value.split(';');
+                    setAttr({
+                        'organization-name': parts[0],
+                        'organization-unit': parts[1]
+                    });
+
+                } else if(key == 'RELATED') { // 6.6.6
+                    setAttr({
+                        type: attrs.TYPE,
+                        pref: attrs.PREF,
+                        value: attrs.VALUE
+                    });
+
                 } else {
                     console.log('WARNING: unhandled key: ', key);
                 }
@@ -326,13 +629,22 @@ var VCF;
             return new Date(c);
         },
 
-        applyTimezone: function(date, tz) {
+        parseTimezone: function(tz) {
             var md;
             if((md = tz.match(/^([+\-])(\d{2})(\d{2})?/))) {
                 var offset = new Date(0);
                 offset.setUTCHours(md[2]);
                 offset.setUTCMinutes(md[3] || 0);
-                return this.addDates(date, offset, md[1] == '+');
+                return Number(offset) * (md[1] == '+' ? +1 : -1);
+            } else {
+                return null;
+            }
+        },
+
+        applyTimezone: function(date, tz) {
+            var offset = this.parseTimezone(tz);
+            if(offset) {
+                return new Date(Number(date) + offset);
             } else {
                 return date;
             }

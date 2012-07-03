@@ -14,6 +14,7 @@
    - test with output from various software.
    - implement: generate vcards from jcards
    - implement: generate hcards (there's a start in [[vcard.js][https://github.com/mattt/vcard.js]]'s toHtml() method)
+   - jCard <-> JSON-LD "http://json-ld.org/contexts/person" conversion
 
 ** Examples
 *** parse a vcard from a string:
