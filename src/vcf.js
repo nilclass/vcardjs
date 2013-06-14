@@ -372,7 +372,7 @@ var VCF;
                 if((md = input.match(this.lineRE))) {
                     if(line && line.indexOf('QUOTED-PRINTABLE') != -1 && line.slice(-1) == '=') {
                         //Join multiline quoted-printables.  Newlines are escaped with a '='
-                        line = line.slice(0,-1) + '\r\n' + md[1];
+                        line = line.slice(0,-1) + md[1];
                         length = md[0].length;
                     } else {
                         if(line) {
@@ -410,6 +410,11 @@ var VCF;
         lexLine: function(line, callback) {
             var tmp = '';
             var key = null, attrs = {}, value = null, attrKey = null;
+
+            var qp = line.indexOf('ENCODING=QUOTED-PRINTABLE');
+            if(qp != -1){
+                line = line.substr(0,qp) + this.decodeQP(line.substr(qp+25));
+            }
 
             function finalizeKeyOrAttr() {
                 if(key) {
@@ -453,6 +458,21 @@ var VCF;
                     tmp += c;
                 }
             }
+        },
+        decodeQP: function(str){
+            str = (str || "").toString();
+            str = str.replace(/\=(?:\r?\n|$)/g, "");
+            var str2 = "";
+            for(var i=0, len = str.length; i<len; i++){
+                chr = str.charAt(i);
+                if(chr == "=" && (hex = str.substr(i+1, 2)) && /[\da-fA-F]{2}/.test(hex)){
+                    str2 += String.fromCharCode(parseInt(hex,16));
+                    i+=2;
+                    continue;
+                }
+                str2 += chr;
+            }
+            return str2;
         }
 
     };
