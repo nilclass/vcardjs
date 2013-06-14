@@ -143,6 +143,13 @@ var VCF;
                         value: attrs.VALUE
                     });
 
+                } else if(key =='ADR'){
+                    setAttr({
+                        type: attrs.TYPE,
+                        pref: attrs.PREF,
+                        value: value
+                    });
+                    //TODO: Handle 'LABEL' field.
                 } else {
                     console.log('WARNING: unhandled key: ', key);
                 }
