@@ -370,11 +370,17 @@ var VCF;
 
             for(;;) {
                 if((md = input.match(this.lineRE))) {
-                    if(line) {
-                        this.lexLine(line, callback);
+                    if(line && line.indexOf('QUOTED-PRINTABLE') != -1 && line.slice(-1) == '=') {
+                        //Join multiline quoted-printables.  Newlines are escaped with a '='
+                        line = line.slice(0,-1) + '\r\n' + md[1];
+                        length = md[0].length;
+                    } else {
+                        if(line) {
+                            this.lexLine(line, callback);   
+                        }
+                        line = md[1];
+                        length = md[0].length;
                     }
-                    line = md[1];
-                    length = md[0].length;
                 } else if((md = input.match(this.foldedLineRE))) {
                     if(line) {
                         line += md[1];
@@ -408,10 +414,15 @@ var VCF;
             function finalizeKeyOrAttr() {
                 if(key) {
                     if(attrKey) {
-                        attrs[attrKey] = tmp;
+                        attrs[attrKey] = tmp.split(',');
                     } else {
-                        console.error("Invalid attribute: ", tmp, 'Line dropped.');
-                        return;
+                        //"Floating" attributes are probably vCard 2.1 TYPE or PREF values.
+                        if(tmp == "PREF"){
+                            attrs.PREF = 1;
+                        } else {
+                            if (attrs.TYPE) attrs.TYPE.push(tmp);
+                            else attrs.TYPE = [tmp];
+                        }
                     }
                 } else {
                     key = tmp;
