@@ -370,8 +370,9 @@ var VCF;
 
             for(;;) {
                 if((md = input.match(this.lineRE))) {
+                    // Join multiline quoted-printables (vCard 2.1) into a single line before parsing.
+                    // "Soft" linebreaks are indicated by a '=' at the end of the line.
                     if(line && line.indexOf('QUOTED-PRINTABLE') != -1 && line.slice(-1) == '=') {
-                        //Join multiline quoted-printables.  Newlines are escaped with a '='
                         line = line.slice(0,-1) + md[1];
                         length = md[0].length;
                     } else {
@@ -411,6 +412,7 @@ var VCF;
             var tmp = '';
             var key = null, attrs = {}, value = null, attrKey = null;
 
+            //If our value is a quoted-printable (vCard 2.1), decode it and discard the encoding attribute
             var qp = line.indexOf('ENCODING=QUOTED-PRINTABLE');
             if(qp != -1){
                 line = line.substr(0,qp) + this.decodeQP(line.substr(qp+25));
@@ -459,6 +461,15 @@ var VCF;
                 }
             }
         },
+        /** Quoted Printable Parser
+          * 
+          * Parses quoted-printable strings, which sometimes appear in 
+          * vCard 2.1 files (usually the address field)
+          * 
+          * Code adapted from: 
+          * https://github.com/andris9/mimelib
+          *
+        **/
         decodeQP: function(str){
             str = (str || "").toString();
             str = str.replace(/\=(?:\r?\n|$)/g, "");
