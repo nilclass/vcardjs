@@ -370,8 +370,9 @@ var VCF;
 
             for(;;) {
                 if((md = input.match(this.lineRE))) {
-                    // Join multiline quoted-printables (vCard 2.1) into a single line before parsing.
-                    // "Soft" linebreaks are indicated by a '=' at the end of the line.
+                    // Unfold quoted-printables (vCard 2.1) into a single line before parsing.
+                    // "Soft" linebreaks are indicated by a '=' at the end of the line, and do
+                    // not affect the underlying data.
                     if(line && line.indexOf('QUOTED-PRINTABLE') != -1 && line.slice(-1) == '=') {
                         line = line.slice(0,-1) + md[1];
                         length = md[0].length;
