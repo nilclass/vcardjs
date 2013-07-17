@@ -1,0 +1,11 @@
+{
+  "name": "vcardjs",
+  "desc": "vCardJS - a vCard 4.0 implementation in JavaScript.",
+  "version": "0.3",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/nilclass/vcardjs.git"
+  }
+}
