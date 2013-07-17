@@ -143,6 +143,13 @@ var VCF;
                         value: attrs.VALUE
                     });
 
+                } else if(key =='ADR'){
+                    setAttr({
+                        type: attrs.TYPE,
+                        pref: attrs.PREF,
+                        value: value
+                    });
+                    //TODO: Handle 'LABEL' field.
                 } else {
                     console.log('WARNING: unhandled key: ', key);
                 }
@@ -363,11 +370,19 @@ var VCF;
 
             for(;;) {
                 if((md = input.match(this.lineRE))) {
-                    if(line) {
-                        this.lexLine(line, callback);
+                    // Unfold quoted-printables (vCard 2.1) into a single line before parsing.
+                    // "Soft" linebreaks are indicated by a '=' at the end of the line, and do
+                    // not affect the underlying data.
+                    if(line && line.indexOf('QUOTED-PRINTABLE') != -1 && line.slice(-1) == '=') {
+                        line = line.slice(0,-1) + md[1];
+                        length = md[0].length;
+                    } else {
+                        if(line) {
+                            this.lexLine(line, callback);   
+                        }
+                        line = md[1];
+                        length = md[0].length;
                     }
-                    line = md[1];
-                    length = md[0].length;
                 } else if((md = input.match(this.foldedLineRE))) {
                     if(line) {
                         line += md[1];
@@ -398,13 +413,24 @@ var VCF;
             var tmp = '';
             var key = null, attrs = {}, value = null, attrKey = null;
 
+            //If our value is a quoted-printable (vCard 2.1), decode it and discard the encoding attribute
+            var qp = line.indexOf('ENCODING=QUOTED-PRINTABLE');
+            if(qp != -1){
+                line = line.substr(0,qp) + this.decodeQP(line.substr(qp+25));
+            }
+
             function finalizeKeyOrAttr() {
                 if(key) {
                     if(attrKey) {
-                        attrs[attrKey] = tmp;
+                        attrs[attrKey] = tmp.split(',');
                     } else {
-                        console.error("Invalid attribute: ", tmp, 'Line dropped.');
-                        return;
+                        //"Floating" attributes are probably vCard 2.1 TYPE or PREF values.
+                        if(tmp == "PREF"){
+                            attrs.PREF = 1;
+                        } else {
+                            if (attrs.TYPE) attrs.TYPE.push(tmp);
+                            else attrs.TYPE = [tmp];
+                        }
                     }
                 } else {
                     key = tmp;
@@ -435,6 +461,30 @@ var VCF;
                     tmp += c;
                 }
             }
+        },
+        /** Quoted Printable Parser
+          * 
+          * Parses quoted-printable strings, which sometimes appear in 
+          * vCard 2.1 files (usually the address field)
+          * 
+          * Code adapted from: 
+          * https://github.com/andris9/mimelib
+          *
+        **/
+        decodeQP: function(str){
+            str = (str || "").toString();
+            str = str.replace(/\=(?:\r?\n|$)/g, "");
+            var str2 = "";
+            for(var i=0, len = str.length; i<len; i++){
+                chr = str.charAt(i);
+                if(chr == "=" && (hex = str.substr(i+1, 2)) && /[\da-fA-F]{2}/.test(hex)){
+                    str2 += String.fromCharCode(parseInt(hex,16));
+                    i+=2;
+                    continue;
+                }
+                str2 += chr;
+            }
+            return str2;
         }
 
     };
