@@ -1,7 +1,7 @@
 {
   "name": "vcardjs",
   "desc": "vCardJS - a vCard 4.0 implementation in JavaScript.",
-  "version": "0.3",
+  "version": "0.3.0",
   "private": false,
   "license": "MIT",
   "repository": {
