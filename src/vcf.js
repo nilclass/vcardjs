@@ -369,6 +369,7 @@ var VCF;
             var md, line = null, length = 0;
 
             for(;;) {
+                length = input.match(/^(.*)(?:\r?\n|$)/)[0].length;
                 if((md = input.match(this.lineRE))) {
                     // Unfold quoted-printables (vCard 2.1) into a single line before parsing.
                     // "Soft" linebreaks are indicated by a '=' at the end of the line, and do
